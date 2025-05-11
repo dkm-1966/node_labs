@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+body {
+    height: 100vh;
+    font-family: "Inter", sans-serif;
+}
+
+@layer base {
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--color-slate-50);
+      opacity: 0.5;
+    }
+  }
+
+::-webkit-scrollbar {
+    background: transparent;
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #9b9b9b;
+    border-radius: 5px;
+}
