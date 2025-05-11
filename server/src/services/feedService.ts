@@ -1,8 +1,9 @@
-import ProfileWithoutBioDto from "../dto/profileWithoutBioDto";
+import { userDto } from "../dto/profileDto";
+import IProfileWithoutBio from "../models/interfaces/Profile/IProfileWithoutBio";
 import { profileRepository } from "../repositories/profileRepository";
 
 export default class feedService {
-    static async get(limit: number, offset: number, id: number, interests: string[]): Promise<ProfileWithoutBioDto[]> {
+    static async get(limit: number, offset: number, id: number, interests: string[]): Promise<IProfileWithoutBio[]> {
         console.log("servise", interests )
         let profiles;
 
@@ -13,11 +14,16 @@ export default class feedService {
             profiles = await profileRepository.getProfiles(limit, offset, id);
         }
 
-        const profileWithoutBio = profiles.map(profile => new ProfileWithoutBioDto(profile))
+        const profileWithoutBio = profiles.map(profile => {
+            const user = new userDto(profile)
+            const {info, ...rest} = user
+
+            return rest
+        })
         return profileWithoutBio
     }
 
-    static async getById(id: number): Promise<ProfileWithoutBioDto>  {
+    static async getById(id: number): Promise<IProfileWithoutBio> {
         if (!id) {
             throw new Error("Id is required")
         }
@@ -28,8 +34,9 @@ export default class feedService {
             throw new Error("User not found");
         } 
 
-        const profileWithoutBio = new ProfileWithoutBioDto(profile);
-        console.log("serviceById", profileWithoutBio)
-        return profileWithoutBio;
+        const FormattedProfile = new userDto(profile);
+        const {info, ...rest} = FormattedProfile
+
+        return rest;
     }
 }

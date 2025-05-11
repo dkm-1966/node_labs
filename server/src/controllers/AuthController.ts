@@ -6,6 +6,12 @@ export default class AuthController {
     console.log("register")
     try {
       const { email, password } = req.body;
+
+      if (!email || !password) {
+        res.status(400).json({ message: " Bad Request: Credentials are required" });
+        return;
+      }
+
       const userId = await AuthService.register(email, password);
 
       res.status(201).json({ message: "User loged in", userId });
@@ -21,12 +27,18 @@ export default class AuthController {
     console.log("login")
     try {
       const { email, password } = req.body;
+
+      if (!email || !password) {
+        res.status(400).json({ message: "Bad Request: Credentials are required" });
+        return;
+      }
+
       const userId = await AuthService.login(email, password);
 
       if (userId) {
         res.status(200).json({ message: "User loged in", userId });
       } else {
-        res.status(401).json({ message: "Invalid credentials" });
+        res.status(401).json({ message: "Unauthorized: Invalid credentials" });
       }
 
       return

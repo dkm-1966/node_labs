@@ -1,69 +1,129 @@
-import { col, fn, literal, Sequelize } from "sequelize";
 import { Op } from "sequelize";
-import database from "../config/database";
+import { models } from "../models";
+import { Profile } from "../models/Profile";
 
 export default class MatchRepository {
   //READ
-  static async getMatchesProfiles(id: number) {
-    const query = `SELECT p.*, 
-                    ARRAY_AGG(DISTINCT jsonb_build_object(
-                                'interest', i.interest,
-                                'category', c.category
-                              )) AS interests,
-                     pi.*
-                    FROM profile p
-                    JOIN match m 
-                      ON (
-                        (m.first_partner = p.id AND m.second_partner = $1) OR 
-                        (m.second_partner = p.id AND m.first_partner = $1)
-                      )
-                      AND m.status = 'match'
-                    LEFT JOIN user_interest ui ON ui.profile_id = p.id
-                    LEFT JOIN interests i ON i.id = ui.interest_id
-                    LEFT JOIN category c ON c.id = i.category_id
-                    LEFT JOIN picture pi ON pi.profile_id = p.id
-                    GROUP BY p.id, pi.id;
-                  `;
-    const values = [id];
-    const result = await database.query(query, values);
-    console.log("default sql:", result.rows);
-    return result.rows;
+  static async getMatchesProfiles(id: number): Promise<Profile[] | []> {
+    const matches = await models.Profile.findAll({
+      include: [
+        {
+          model: models.Match,
+          as: "MatchesAsFirst",
+          required: false,
+          where: {
+            second_partner: id,
+            status: "match",
+          },
+        },
+        {
+          model: models.Match,
+          as: "MatchesAsSecond",
+          required: false,
+          where: {
+            first_partner: id,
+            status: "match",
+          },
+        },
+        {
+          model: models.Picture,
+          required: false,
+        },
+        {
+          model: models.Interests,
+          required: false,
+          include: [
+            {
+              model: models.Category,
+              required: false,
+            },
+          ],
+        },
+      ],
+      where: {
+        [Op.or]: [
+          { "$MatchesAsFirst.second_partner$": id },
+          { "$MatchesAsSecond.first_partner$": id },
+        ],
+      },
+    });
+    return matches;
   }
 
-  static async getLikedProfiles(id: number) {
-    const query = `SELECT * FROM match
-                        JOIN profile ON profile.id = match.second_partner
-                        LEFT JOIN user_interest ON user_interest.profile_id = profile.id
-                        LEFT JOIN interests ON interests.id = user_interest.interest_id 
-                        LEFT JOIN picture ON picture.profile_id = profile.id
-                        WHERE second_partner = $1 AND status = 'pending'
-        `;
-    const values = [id];
-    const result = await database.query(query, values);
-    return result.rows;
+  static async getLikedProfiles(id: number): Promise<Profile[] | []> {
+    const likes = models.Profile.findAll({
+      include: [
+        {
+          model: models.Match,
+          as: "MatchesAsFirst",
+          where: {
+            [Op.and]: {
+              second_partner: id,
+              [Op.not]: {
+                first_partner: id,
+              },
+            },
+            status: "pending",
+          },
+        },
+        {
+          model: models.Interests,
+          required: false,
+          include: [
+            {
+              model: models.Category,
+              required: false,
+            },
+          ],
+        },
+        {
+          model: models.Picture,
+          required: false,
+        },
+      ],
+    });
+    return likes;
   }
 
-  //Creating new match
-  static async createMatch(id: number, partnerId: number) {
-    const query = `INSERT INTO match (first_partner, second_partner)
-                      VALUES ((SELECT id FROM profile WHERE user_id = $1), $2)
-        `;
+  //CREATE
+  static async createMatch(id: number, partnerId: number): Promise<number> {
+    const firstProfile = await models.Profile.findOne({
+      where: {
+        user_id: id,
+      },
+    });
 
-    const values = [id, partnerId];
-    const result = await database.query(query, values);
+    const plainProfile = firstProfile?.get({ plain: true });
 
-    return result.rows[0].id;
+    if (!plainProfile) {
+      throw new Error("Profile not found for user");
+    }
+
+    const match = await models.Match.create({
+      first_partner: plainProfile.id,
+      second_partner: partnerId,
+      status: "pending"
+    });
+
+    return match.id;
   }
 
   //UPDATE
-  static async updateMatch(id: number, partnerId: number) {
-    const query = `UPDATE match SET status = 'match' 
-                        WHERE first_partner = $2 AND second_partner = $1
-                        RETURNING match.id
-        `;
-    const values = [id, partnerId];
-    const result = await database.query(query, values);
+  static async updateMatch(id: number, partnerId: number): Promise<boolean> {
+    console.log("Updating match")
+    const updatedMatch = await models.Match.update(
+      {
+        status: "match",
+      },
+      {
+        where: {
+          first_partner: partnerId,
+          second_partner: id,
+        },
+      }
+    );
+    console.log("updatedMatch", updatedMatch);
 
-    return result.rows[0];
+    return Boolean(updatedMatch);
   }
 }

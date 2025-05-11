@@ -7,10 +7,10 @@ export default class ProfileWithoutBioDto {
     age: number | null;
     country: string | null;
     city: string | null;
-    picture_url: string | null;
-    interests: string[] | null;
+    picture_url?: string;
+    interests?: IInterest[];
 
-    constructor(userFromDb: IProfileDB) {
+    constructor(userFromDb: IProfileDB) { 
       this.name = userFromDb.name;
       this.id = userFromDb.id;
       this.age = userFromDb.age;

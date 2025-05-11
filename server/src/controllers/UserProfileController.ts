@@ -9,7 +9,17 @@ class UserProfileController {
       const userId = req.query.id;
       const parsedId = parseInt(userId as string);
 
+      if (isNaN(parsedId)) {
+        res.status(400).json({ status: "error", message: "Bad Request: 'id' must be a valid number" });
+        return;
+      } 
+
       const profile = await userService.get(parsedId);
+
+      if (!profile) {
+        res.status(404).json({ status: "error", message: "Not Found: User profile does not exist" });
+        return;
+      }
 
       res.status(200).json({
         status: "success",
@@ -20,9 +30,8 @@ class UserProfileController {
       console.error("Error fetching user:", error);
       res.status(500).json({
         status: "error",
-        message: error,
+        message: "Internal Server Error: Failed to fetch user profile",
       });
-      return;
     }
   }
 
@@ -30,6 +39,12 @@ class UserProfileController {
     console.log("createUserProfile")
     try {
       const id = parseInt(req.query.id as string);
+
+      if (isNaN(id)) {
+        res.status(400).json({ status: "error", message: "Bad Request: 'id' must be a valid number" });
+        return;
+      }
+
       const data = req.body;
 
       const profileId = await userService.create(data, id);
@@ -44,9 +59,8 @@ class UserProfileController {
       console.error("Error creating user:", error);
       res.status(500).json({
         status: "error",
-        message: error,
+        message: "Internal Server Error: Failed to create user profile",
       });
-      return;
     }
   }
 
@@ -55,6 +69,12 @@ class UserProfileController {
     try {
       const userId = req.query.id;
       const parsedId = parseInt(userId as string);
+
+      if (isNaN(parsedId)) {
+        res.status(400).json({ status: "error", message: "Bad Request: 'id' must be a valid number" });
+        return;
+      }
+
       const data = req.body;
 
       const id = await userService.update(parsedId, data);
@@ -69,9 +89,8 @@ class UserProfileController {
       console.error("Error updating user profile:", error);
       res.status(500).json({
         status: "error",
-        message: error,
+        message: "Internal Server Error: Failed to update user profile",
       });
-      return;
     }
   }
 
@@ -80,6 +99,11 @@ class UserProfileController {
     try {
       const userId = req.query.id;
       const parsedId = parseInt(userId as string);
+
+      if (isNaN(parsedId)) {
+        res.status(400).json({ status: "error", message: "Bad Request: 'id' must be a valid number" });
+        return;
+      }
 
       const id = await userService.delete(parsedId);
 
@@ -93,32 +117,8 @@ class UserProfileController {
       console.error("Error deleting user profile:", error);
       res.status(500).json({
         status: "error",
-        message: "Error deleting user profile",
+        message: "Internal Server Error: Failed to delete user profile",
       });
-      return;
-    }
-  }
-
-  static async getUser(req: Request, res: Response): Promise<void> {
-    console.log("getUser")
-    try {
-      const userId = req.query.id;
-      const parsedId = parseInt(userId as string);
-
-      const user = await userService.getUser(parsedId);
-
-      res.status(200).json({
-        status: "success",
-        user,
-      });
-      return;
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({
-        status: "error",
-        message: error,
-      });
-      return;
     }
   }
 }

@@ -6,16 +6,18 @@ export default class MatchController {
     try {
       const id = req.query.id;
       const formattedId = parseInt(id as string);
-      console.log("getMatches controller", id)
+
+      if (isNaN(formattedId)) {
+        res.status(400).json({ message: "Bad Request: ID is required and must be a number" });
+        return;
+      }
 
       const feeds = await MatchService.getMatches(formattedId);
 
       res.status(200).json(feeds);
     } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        message: "Error getting matches",
-      });
+      console.error("Error getting matches:", error);
+      res.status(500).json({ message: "Internal Server Error" });
     }
   }
 
@@ -24,14 +26,17 @@ export default class MatchController {
       const id = req.query.id;
       const formattedId = parseInt(id as string);
 
+      if (isNaN(formattedId)) {
+        res.status(400).json({ message: "Bad Request: ID is required and must be a number" });
+        return;
+      }
+
       const feeds = await MatchService.getLikes(formattedId);
 
       res.status(200).json(feeds);
     } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        message: "Error updating user profile",
-      });
+      console.error("Error getting likes:", error);
+      res.status(500).json({ message: "Internal Server Error" });
     }
   }
 
@@ -40,13 +45,15 @@ export default class MatchController {
         const {id, partnerId} = req.body;
 
         if (!id || !partnerId) {
-            throw new Error("Ids are required");
+          res.status(400).json({ message: "Bad Request: Both 'id' and 'partnerId' are required" });
+          return;
         }
 
         const matchId = await MatchService.setLike(id, partnerId)
-        res.status(200).json(matchId)
+        res.status(200).json({ message: "Like set", matchId });
     } catch (error) {
-
+      console.error("Error setting like:", error);
+      res.status(500).json({ message: "Internal Server Error" });
     }
   }
 
@@ -55,13 +62,15 @@ export default class MatchController {
       const {id, partnerId} = req.body;
 
       if (!id || !partnerId) {
-        throw new Error("Ids are required");
+        res.status(400).json({ message: "Bad Request: Both 'id' and 'partnerId' are required" });
+        return;
       }
 
       const matchId = await MatchService.setMatch(id, partnerId)
-      res.status(200).json(matchId)
+      res.status(200).json({ message: "Match created", matchId });
     }catch (error) {
-      throw error
+      console.error("Error creating match:", error);
+      res.status(500).json({ message: "Internal Server Error" });
     }
   }
 }

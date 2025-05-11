@@ -1,19 +1,28 @@
+import { literal, Op, QueryTypes, where } from "sequelize";
 import database from "../config/database";
+import { models } from "../models";
 import IInterest from "../models/interfaces/Profile/IInterests";
 import IProfile from "../models/interfaces/Profile/IProfile";
 import IProfileDB from "../models/interfaces/Profile/IProfileDB";
+import { Profile } from "../models/Profile";
+import sequelize from "../config/sequalize";
 
 export class profileRepository {
   //CREATE
   static async createProfile(data: IProfile, id: number): Promise<number> {
     console.log("createProfile", data);
-    let query = `INSERT INTO profile (name, age, info, country, city, user_id) 
-                VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`;
-    let values = [data.name, data.age, data.info, data.country, data.city, id];
-    const userResult = await database.query(query, values);
-    console.log("createProfile result:", userResult);
+    const profile = await models.Profile.create({
+      name: data.name,
+      age: data.age,
+      info: data.info,
+      country: data.country,
+      city: data.city,
+      user_id: id
+    })
 
-    return userResult.rows[0].id;
+    console.log("createProfile result:", profile);
+
+    return profile.id;
   }
 
   static async createInterests(
@@ -21,12 +30,22 @@ export class profileRepository {
     interest: string
   ): Promise<void> {
     console.log("createInterests", profileId, interest);
-    const query = `INSERT INTO user_interest (profile_id, interest_id) 
-    VALUES ($1, (SELECT id FROM interests WHERE interest = $2))`;
+    const foundInterest = await models.Interests.findOne({
+      where: {
+        interest: interest
+      }
+    })
 
-    const values = [profileId, interest];
-    const result = await database.query(query, values);
-    console.log("createInterests result", result);
+    if (!foundInterest) {
+      throw new Error("Profile not found for user");
+    }
+
+    const plainInterest = foundInterest?.get({ plain: true });
+
+    await models.UserInterest.create({
+      profile_id: profileId,
+      interest_id: plainInterest.id
+    })
   }
 
   static async createPicture(
@@ -35,82 +54,77 @@ export class profileRepository {
   ): Promise<number> {
     console.log("createPicture", profileId, picture);
 
-    const query = `INSERT INTO picture (profile_id, picture_url) VALUES ($1, $2) RETURNING id`;
+    const createdPicture = await models.Picture.create({
+      profile_id: profileId,
+      picture_url: picture
+    })
 
-    const values = [profileId, picture];
-    const result = await database.query(query, values);
-
-    console.log("createPicture result", result);
-
-    return result.rows[0].id;
+    return createdPicture.id;
   }
 
   //READ
-  static async getProfile(id: number): Promise<IProfileDB | undefined> {
+  static async getProfile(id: number): Promise<Profile | null> {
     console.log("getProfile", id);
-    const query = `SELECT 
-                    profile.id,
-                    profile.name,
-                    profile.age,
-                    profile.info,
-                    profile.country,
-                    profile.city,
-                    profile.user_id,
-                    ARRAY_AGG(DISTINCT jsonb_build_object(
-                                'interest', interests.interest,
-                                'category', category.category
-                              )) AS interests,
-                    picture.picture_url
-                  FROM profile 
-                  LEFT JOIN user_interest ON user_interest.profile_id = profile.id
-                  LEFT JOIN interests ON interests.id = user_interest.interest_id 
-                  LEFT JOIN category ON category.id = interests.category_id
-                  LEFT JOIN picture ON picture.profile_id = profile.id
-                  WHERE profile.user_id = $1
-                  GROUP BY profile.id, picture.picture_url;`;
-    const values = [id];
-    const result = await database.query(query, values);
+    const profile = await models.Profile.findOne({
+      where: { user_id: id },
+      attributes: [
+        'id', 'name', 'age', 'info', 'country', 'city', 'user_id',
+      ],
+      include: [
+        {
+          model: models.Interests,
+          required: false,
+          include: [
+            {
+              model: models.Category
+            },
+          ]
+        },
+        {
+          model: models.Picture,
+          required: false
+        }
+      ]
+    })
 
-    return result.rows[0];
-  }
-
-  static async getUser(id: number): Promise<number | undefined> {
-    console.log("getUser", id);
-
-    const query = `SELECT id FROM users WHERE id = $1`;
-    const values = [id];
-    const result = await database.query(query, values);
-    console.log("getUser result", result);
-
-    return result.rows[0];
+    return profile;
   }
 
   static async getProfiles(limit: number, offset: number, id: number) {
-    console.log("getProfiles", id);
+    console.log("getProfiles", id, limit);
 
-    const query = `SELECT profile.*,
-                    ARRAY_AGG(DISTINCT jsonb_build_object(
-                                'interest', interests.interest,
-                                'category', category.category
-                              )) AS interests
-                    FROM profile
-                    LEFT JOIN user_interest ON user_interest.profile_id = profile.id
-                    LEFT JOIN interests ON interests.id = user_interest.interest_id 
-                    LEFT JOIN category ON category.id = interests.category_id
-                    LEFT JOIN picture ON picture.profile_id = profile.id
-                    WHERE profile.id NOT IN (
-                        SELECT first_partner FROM match WHERE first_partner = $3 OR second_partner = $3
-                        UNION
-                        SELECT second_partner FROM match WHERE first_partner = $3 OR second_partner = $3
-                    ) AND profile.user_id != $3
-                    GROUP BY profile.id
-                    LIMIT $1 OFFSET $2;`          
-    
+    const profileIds = await Profile.findAll({
+      attributes: ['id'],
+      where: {
+        user_id: { [Op.ne]: id },
+        id: {
+          [Op.notIn]: literal(`(
+            SELECT first_partner FROM match WHERE first_partner = ${id} OR second_partner = ${id}
+            UNION
+            SELECT second_partner FROM match WHERE first_partner = ${id} OR second_partner = ${id}
+          )`)
+        }
+      },
+      limit,
+      offset,
+      raw: true
+    });
 
-    const values = [limit, offset, id];
-    const rawData = await database.query(query, values);
+    const fullProfiles = await Profile.findAll({
+      where: { id: profileIds.map(p => p.id) },
+      include: [
+        {
+          model: models.Interests,
+          include: [{ model: models.Category, required: false }],
+          required: false
+        },
+        { model: models.Picture, required: false },
+      ]
+    });
 
-    return rawData.rows
+    console.log("profilesprofilesprofiles", fullProfiles)
+
+    return fullProfiles
   }
 
   static async getProfilesByInterest(
@@ -120,57 +134,69 @@ export class profileRepository {
     interests: string[]
   ) {
     console.log("REPOS",id,interests )
-    const query = `SELECT profile.*,
-                    ARRAY_AGG(DISTINCT jsonb_build_object(
-                                'interest', interests.interest,
-                                'category', category.category
-                              )) AS interests
-                    FROM profile
-                    LEFT JOIN user_interest ON user_interest.profile_id = profile.id
-                    LEFT JOIN interests ON interests.id = user_interest.interest_id 
-                    LEFT JOIN category ON category.id = interests.category_id
-                    LEFT JOIN picture ON picture.profile_id = profile.id
-                    WHERE profile.id NOT IN (
-                        SELECT first_partner FROM match WHERE first_partner = $3 OR second_partner = $3
-                        UNION
-                        SELECT second_partner FROM match WHERE first_partner = $3 OR second_partner = $3
-                    ) AND profile.user_id != $3
-                    AND EXISTS (
-                      SELECT 1
-                      FROM user_interest ui
-                      JOIN interests i ON i.id = ui.interest_id
-                      WHERE ui.profile_id = profile.id
-                      AND i.interest = ANY($4)
-                    )
-                    GROUP BY profile.id
-                    LIMIT $1 OFFSET $2;              
-    `;
+    const profiles = await Profile.findAll({
+      where: {
+        user_id: { [Op.ne]: id },
+        id: {
+          [Op.notIn]: literal(`(
+            SELECT first_partner FROM match WHERE first_partner = ${id} OR second_partner = ${id}
+            UNION
+            SELECT second_partner FROM match WHERE first_partner = ${id} OR second_partner = ${id}
+          )`)
+        }
+      },
+      include: [
+        {
+          model: models.Interests,
+          where: {
+            interest: { [Op.in]: interests },
+          },
+          through: { attributes: [] },
+          include: [
+            {
+              model: models.Category,
+              required: false
+            }
+          ],
+          required: true
+        },
+        {
+          model: models.Picture,
+          required: false
+        }
+      ],
+      limit,
+      offset,
+      subQuery: false,
+      distinct: true
+    } as any);
 
-    const values = [limit, offset, id, interests ];
-    const result = await database.query(query, values);
-    return result.rows;
+    console.log("KJGHKJLHJ", profiles)
+
+    return profiles;
   }
 
   //UPDATE
   static async updateProfile(
     id: number,
     data: IProfile
-  ): Promise<number | undefined> {
+  ): Promise<boolean> {
     console.log("updateProfile", id, data);
-    const query = `UPDATE profile SET name = $1, age = $2, info = $3, country = $4, city = $5 WHERE user_id = $6 RETURNING id`;
-    const values = [
-      data.name,
-      data.age,
-      data.info,
-      data.country,
-      data.city,
-      id,
-    ];
+    const updatedProfile = await models.Profile.update({
+      name: data.name,
+      age: data.age,
+      info: data.info,
+      country: data.country,
+      city: data.city,
+    }, {
+      where: {
+        user_id: id
+      }
+    })
 
-    const result = await database.query(query, values);
-    console.log("updateProfile result", result);
+    console.log("updateProfile result", updatedProfile);
 
-    return result.rows[0];
+    return Boolean(updatedProfile[0]);
   }
 
   static async updateInterests(
@@ -179,8 +205,12 @@ export class profileRepository {
   ): Promise<void> {
     console.log("updateInterests", profileId, interests);
 
-    const deleteQuery = `DELETE FROM user_interest WHERE profile_id = $1`;
-    await database.query(deleteQuery, [profileId]);
+    await models.UserInterest.destroy({
+      where: {
+        profile_id: profileId
+      }
+    })
+
     for (const interest of interests) {
       await this.createInterests(profileId, interest.interest);
     }
@@ -192,21 +222,25 @@ export class profileRepository {
   ): Promise<void> {
     console.log("updatePicture", profileId, picture);
 
-    const deleteQuery = `DELETE FROM picture WHERE profile_id = $1`;
-    await database.query(deleteQuery, [profileId]);
+    await models.Picture.destroy({
+      where: {
+        profile_id: profileId
+      }
+    })
+
     await this.createPicture(profileId, picture);
   }
 
   //DELETE
-  static async deleteProfile(id: number): Promise<number | undefined> {
+  static async deleteProfile(id: number): Promise<number> {
     console.log("deleteProfile", id);
 
-    const query = `DELETE FROM profile WHERE user_id = $1 RETURNING id`;
-    const values = [id];
+    const deletedProfile = await models.Profile.destroy({
+      where: {
+        user_id: id 
+      }
+    })
 
-    const result = await database.query(query, values);
-    console.log("deleteProfile result", result);
-
-    return result.rows[0];
+    return deletedProfile;
   }
 }

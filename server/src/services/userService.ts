@@ -58,7 +58,8 @@ export default class userService {
     }
   }
 
-  static async get(id: number): Promise<userDto | undefined> {
+  static async get(id: number): Promise<userDto | undefined> 
+  {
     if (!id) {
       throw new Error("User ID is required");
     }
@@ -74,20 +75,7 @@ export default class userService {
     return user;
   }
 
-  static async getUser(id: number): Promise<number | undefined> {
-    if (!id) {
-      throw new Error("User ID is required");
-    }
-
-    const userId = await profileRepository.getUser(id);
-    if (!userId) {
-      throw new Error("User not found");
-    }
-
-    return userId;
-  }
-
-  static async update(id: number, data: IProfile): Promise<number | undefined> {
+  static async update(id: number, data: IProfile): Promise<boolean> {
     try {
       await database.query('BEGIN');
       console.log("Finding user with id:", id)
