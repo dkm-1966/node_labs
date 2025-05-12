@@ -13,11 +13,10 @@ interface Profile {
 }
 
 const Feed: FC = () => {
-  const [limit, setLimit] = useState<number>(5)
   const [offset, setOffset] = useState<number>(0);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
-  let isPrevBtnDisabled = limit <= 5 || offset <= 0;
+  let isPrevBtnDisabled = offset <= 0;
   let isNextBtnDisabled = profiles.length < 5 || profiles.length === 0; 
 
   useEffect(() => {
@@ -29,7 +28,7 @@ const Feed: FC = () => {
     console.log(current_user_id);
 
     fetch(
-      `http://localhost:5001/api/v1/profiles?limit=${limit}&offset=${offset}&id=${current_user_id}&${query.toString()}`,
+      `http://localhost:5001/api/v1/profiles?limit=5&offset=${offset}&id=${current_user_id}&${query.toString()}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -39,18 +38,16 @@ const Feed: FC = () => {
       const data = await res.json();
       setProfiles(data);
     });
-  }, [limit, offset]);
+  }, [offset]);
   
   const handleNextPage = () => {
     if (!isNextBtnDisabled){
-      setLimit((prev) => prev + 5)
       setOffset((prev) => prev + 5)
     }
   }
 
   const handlePrevPage = () => {
     if(!isPrevBtnDisabled) {
-      setLimit((prev) => prev - 5)
       setOffset((prev) => prev - 5)
     }
   }

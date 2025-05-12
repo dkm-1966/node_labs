@@ -45,8 +45,8 @@ export default class MatchRepository {
 
   //Creating new match
   static async createMatch(id: number, partnerId: number) {
-    const query = `INSERT INTO match (first_partner, second_partner)
-                      VALUES ((SELECT id FROM profile WHERE user_id = $1), $2)
+    const query = `INSERT INTO match (first_partner, second_partner, status)
+                      VALUES ((SELECT id FROM profile WHERE user_id = $1), $2, "pending")
         `;
 
     const values = [id, partnerId];

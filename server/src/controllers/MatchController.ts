@@ -37,16 +37,15 @@ export default class MatchController {
 
   static async setLike(req: Request, res: Response) {
     try {
-        const {id, partnerId} = req.body;
+      const {id, partnerId} = req.body;
 
-        if (!id || !partnerId) {
-            throw new Error("Ids are required");
-        }
+      if (!id || !partnerId) {
+          throw new Error("Ids are required");
+      }
 
-        const matchId = await MatchService.setLike(id, partnerId)
-        res.status(200).json(matchId)
+      const matchId = await MatchService.setLike(id, partnerId)
+      res.status(200).json(matchId)
     } catch (error) {
-
     }
   }
 
