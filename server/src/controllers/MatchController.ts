@@ -37,7 +37,8 @@ export default class MatchController {
 
   static async setLike(req: Request, res: Response) {
     try {
-      const {id, partnerId} = req.body;
+      const id = parseInt(req.query.id as string);
+      const partnerId = parseInt(req.query.partnerId as string)
 
       if (!id || !partnerId) {
           throw new Error("Ids are required");
@@ -46,16 +47,20 @@ export default class MatchController {
       const matchId = await MatchService.setLike(id, partnerId)
       res.status(200).json(matchId)
     } catch (error) {
+      throw error
     }
   }
 
   static async createNewMatch(req: Request, res: Response) {
     try {
-      const {id, partnerId} = req.body;
+      const id = parseInt(req.query.id as string)
+      const partnerId = parseInt(req.query.partnerId as string)
 
       if (!id || !partnerId) {
         throw new Error("Ids are required");
       }
+
+      console.log("Ids for updating matches", id, partnerId)
 
       const matchId = await MatchService.setMatch(id, partnerId)
       res.status(200).json(matchId)

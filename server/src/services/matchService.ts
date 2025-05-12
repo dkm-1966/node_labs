@@ -51,6 +51,7 @@ export default class MatchService {
         try {
             await database.query('BEGIN');
             const matchId = await MatchRepository.updateMatch(id, partnerId);
+            console.log("Updated match id:", matchId)
             await database.query('COMMIT');
             
             return matchId

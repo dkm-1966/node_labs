@@ -1,9 +1,9 @@
 import React, { FC, useEffect, useState } from "react";
 import ProfileShortCard from "./ProfileShortCard";
-import OutlinedButton from "../UI/OutilendButton";
+import OutlinedButton from "../UI/OutlinedButton";
 
 interface Profile {
-  id: string;
+  id: number;
   name: string;
   age: number;
   city: string;
@@ -52,6 +52,24 @@ const Feed: FC = () => {
     }
   }
 
+  const handleSetNewLike = (partnerId: number) => {
+    const currentUserId = sessionStorage.getItem("userId")
+
+    console.log("function triggered")
+        
+    fetch(`http://localhost:5001/api/v1/matches/likes?id=${currentUserId}&partnerId=${partnerId}`, {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json"
+      }
+    }).then(() => {
+      setProfiles((prev) => prev.filter((profile) => profile.id !== partnerId))
+    }).catch((error) => {
+      console.log("Error setting new like from feed", error)
+    })
+  }
+
+
   console.log("profiles", profiles);
   return (
     <div className="flex flex-col gap-4">
@@ -64,7 +82,7 @@ const Feed: FC = () => {
       </div>
       <div className="flex flex-col items-center justify-center gap-4 w-216 p-4 bg-lime-600 rounded-3xl">
       {profiles?.map((profile) => (
-          <ProfileShortCard key={profile.id} {...profile} />
+          <ProfileShortCard key={profile.id} {...profile} callback={handleSetNewLike} page="loveFinder"/>
       ))}
       </div>
     </div>

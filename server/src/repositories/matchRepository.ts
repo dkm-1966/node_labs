@@ -5,24 +5,23 @@ import database from "../config/database";
 export default class MatchRepository {
   //READ
   static async getMatchesProfiles(id: number) {
-    const query = `SELECT p.*, 
-                    ARRAY_AGG(DISTINCT jsonb_build_object(
-                                'interest', i.interest,
-                                'category', c.category
-                              )) AS interests,
-                     pi.*
-                    FROM profile p
-                    JOIN match m 
-                      ON (
-                        (m.first_partner = p.id AND m.second_partner = $1) OR 
-                        (m.second_partner = p.id AND m.first_partner = $1)
-                      )
-                      AND m.status = 'match'
-                    LEFT JOIN user_interest ui ON ui.profile_id = p.id
-                    LEFT JOIN interests i ON i.id = ui.interest_id
-                    LEFT JOIN category c ON c.id = i.category_id
-                    LEFT JOIN picture pi ON pi.profile_id = p.id
-                    GROUP BY p.id, pi.id;
+    const query = `SELECT 
+                    profile.id, 
+                    profile.name, 
+                    profile.age, 
+                    profile.info, 
+                    profile.country, 
+                    profile.city, 
+                    match.status,
+                    picture.picture_url
+                  FROM profile
+                  JOIN match 
+                  ON (
+                    (match.first_partner = profile.id AND match.second_partner = $1) OR 
+                    (match.second_partner = profile.id AND match.first_partner = $1)
+                  )
+                  AND match.status = 'match'
+                  LEFT JOIN picture ON picture.profile_id = profile.id
                   `;
     const values = [id];
     const result = await database.query(query, values);
@@ -31,12 +30,19 @@ export default class MatchRepository {
   }
 
   static async getLikedProfiles(id: number) {
-    const query = `SELECT * FROM match
-                        JOIN profile ON profile.id = match.second_partner
-                        LEFT JOIN user_interest ON user_interest.profile_id = profile.id
-                        LEFT JOIN interests ON interests.id = user_interest.interest_id 
-                        LEFT JOIN picture ON picture.profile_id = profile.id
-                        WHERE second_partner = $1 AND status = 'pending'
+    const query = `SELECT 
+                    profile.id, 
+                    profile.name, 
+                    profile.age, 
+                    profile.info, 
+                    profile.country, 
+                    profile.city, 
+                    match.status,
+                    picture.picture_url
+                  FROM match
+                  JOIN profile ON profile.id = match.first_partner
+                  LEFT JOIN picture ON picture.profile_id = profile.id
+                  WHERE match.second_partner = $1 AND match.status = 'pending'
         `;
     const values = [id];
     const result = await database.query(query, values);
@@ -46,13 +52,13 @@ export default class MatchRepository {
   //Creating new match
   static async createMatch(id: number, partnerId: number) {
     const query = `INSERT INTO match (first_partner, second_partner, status)
-                      VALUES ((SELECT id FROM profile WHERE user_id = $1), $2, "pending")
+                      VALUES ((SELECT id FROM profile WHERE user_id = $1), $2, 'pending')
         `;
 
     const values = [id, partnerId];
     const result = await database.query(query, values);
 
-    return result.rows[0].id;
+    return result.rows[0];
   }
 
   //UPDATE
