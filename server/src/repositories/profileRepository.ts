@@ -1,4 +1,4 @@
-import { literal, Op, QueryTypes, where } from "sequelize";
+import { literal, Op, QueryTypes, Transaction, where } from "sequelize";
 import database from "../config/database";
 import { models } from "../models";
 import IInterest from "../models/interfaces/Profile/IInterests";
@@ -9,7 +9,7 @@ import sequelize from "../config/sequalize";
 
 export class profileRepository {
   //CREATE
-  static async createProfile(data: IProfile, id: number): Promise<number> {
+  static async createProfile(data: IProfile, id: number, transaction: Transaction): Promise<number> {
     console.log("createProfile", data);
     const profile = await models.Profile.create({
       name: data.name,
@@ -18,7 +18,7 @@ export class profileRepository {
       country: data.country,
       city: data.city,
       user_id: id
-    })
+    }, { transaction })
 
     console.log("createProfile result:", profile);
 
@@ -27,7 +27,8 @@ export class profileRepository {
 
   static async createInterests(
     profileId: number,
-    interest: string
+    interest: string, 
+    transaction: Transaction
   ): Promise<void> {
     console.log("createInterests", profileId, interest);
     const foundInterest = await models.Interests.findOne({
@@ -45,19 +46,20 @@ export class profileRepository {
     await models.UserInterest.create({
       profile_id: profileId,
       interest_id: plainInterest.id
-    })
+    }, {transaction})
   }
 
   static async createPicture(
     profileId: number,
-    picture: string
+    picture: string,
+    transaction: Transaction
   ): Promise<number> {
     console.log("createPicture", profileId, picture);
 
     const createdPicture = await models.Picture.create({
       profile_id: profileId,
       picture_url: picture
-    })
+    }, {transaction})
 
     return createdPicture.id;
   }
@@ -179,7 +181,8 @@ export class profileRepository {
   //UPDATE
   static async updateProfile(
     id: number,
-    data: IProfile
+    data: IProfile,
+    transaction: Transaction
   ): Promise<boolean> {
     console.log("updateProfile", id, data);
     const updatedProfile = await models.Profile.update({
@@ -191,7 +194,8 @@ export class profileRepository {
     }, {
       where: {
         user_id: id
-      }
+      },
+      transaction
     })
 
     console.log("updateProfile result", updatedProfile);
@@ -201,44 +205,49 @@ export class profileRepository {
 
   static async updateInterests(
     profileId: number,
-    interests: IInterest[]
+    interests: IInterest[],
+    transaction: Transaction
   ): Promise<void> {
     console.log("updateInterests", profileId, interests);
 
     await models.UserInterest.destroy({
       where: {
         profile_id: profileId
-      }
+      }, 
+      transaction
     })
 
     for (const interest of interests) {
-      await this.createInterests(profileId, interest.interest);
+      await this.createInterests(profileId, interest.interest, transaction);
     }
   }
 
   static async updatePicture(
     profileId: number,
-    picture: string
+    picture: string,
+    transaction: Transaction
   ): Promise<void> {
     console.log("updatePicture", profileId, picture);
 
     await models.Picture.destroy({
       where: {
         profile_id: profileId
-      }
+      }, 
+      transaction
     })
 
-    await this.createPicture(profileId, picture);
+    await this.createPicture(profileId, picture, transaction);
   }
 
   //DELETE
-  static async deleteProfile(id: number): Promise<number> {
+  static async deleteProfile(id: number, transaction: Transaction): Promise<number> {
     console.log("deleteProfile", id);
 
     const deletedProfile = await models.Profile.destroy({
       where: {
         user_id: id 
-      }
+      },
+      transaction
     })
 
     return deletedProfile;

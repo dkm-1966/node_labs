@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import { models } from "../models";
 import { Profile } from "../models/Profile";
 
@@ -86,7 +86,7 @@ export default class MatchRepository {
   }
 
   //CREATE
-  static async createMatch(id: number, partnerId: number): Promise<number> {
+  static async createMatch(id: number, partnerId: number, transaction: Transaction): Promise<number> {
     const firstProfile = await models.Profile.findOne({
       where: {
         user_id: id,
@@ -103,13 +103,13 @@ export default class MatchRepository {
       first_partner: plainProfile.id,
       second_partner: partnerId,
       status: "pending"
-    });
+    }, {transaction});
 
     return match.id;
   }
 
   //UPDATE
-  static async updateMatch(id: number, partnerId: number): Promise<boolean> {
+  static async updateMatch(id: number, partnerId: number, transaction: Transaction): Promise<boolean> {
     console.log("Updating match")
     const updatedMatch = await models.Match.update(
       {
@@ -120,6 +120,7 @@ export default class MatchRepository {
           first_partner: partnerId,
           second_partner: id,
         },
+        transaction
       }
     );
     console.log("updatedMatch", updatedMatch);

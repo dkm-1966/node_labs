@@ -1,4 +1,6 @@
+import { Transaction } from "sequelize";
 import database from "../config/database";
+import sequelize from "../config/sequalize";
 import { userDto } from "../dto/profileDto";
 import IInterest from "../models/interfaces/Profile/IInterests";
 import IProfile from "../models/interfaces/Profile/IProfile";
@@ -6,54 +8,49 @@ import { profileRepository } from "../repositories/profileRepository";
 
 export default class userService {
   static async create(data: IProfile, id: number): Promise<number | undefined> {
+    const t = await sequelize.transaction();
     try {
       console.log("DATA", data)
-      await database.query('BEGIN');
-      const profileId = await profileRepository.createProfile(data, id);
+      const profileId = await profileRepository.createProfile(data, id, t);
       if (data.picture_url) {
-        await this.createPicture(profileId, data.picture_url)
+        await this.createPicture(profileId, data.picture_url, t)
       }
 
       if(data.interests && data.interests.length > 0) {
-        await this.createInterests(profileId, data.interests)
+        await this.createInterests(profileId, data.interests, t)
       }
-      await database.query('COMMIT');
+
+      await t.commit();
 
       return profileId;
     } catch (error) {
-      await database.query('ROLLBACK');
+      await t.rollback();
       throw error;
     }
   }
 
-  static async createPicture(id: number, picture_url: string): Promise<number> {
+  static async createPicture(id: number, picture_url: string, transaction: Transaction): Promise<number> {
     if (!picture_url) {
       throw new Error("Provide picture_url")
     } else if (!id) {
       throw new Error("Provide id")
     }
-    
+
     try {
-      await database.query('BEGIN');
-      const picture_id = await profileRepository.createPicture(id, picture_url);
-      await database.query('COMMIT');
+      const picture_id = await profileRepository.createPicture(id, picture_url, transaction);
 
       return picture_id;
     }catch (error) {
-      await database.query('ROLLBACK');
       throw error;
     }
   }
 
-  static async createInterests(id: number, interests: IInterest[]): Promise<void> {
+  static async createInterests(id: number, interests: IInterest[], transaction: Transaction): Promise<void> {
     try {
-      await database.query('BEGIN');
       for (const interest of interests) {
-        await profileRepository.createInterests(id, interest.interest);
+        await profileRepository.createInterests(id, interest.interest, transaction);
       }
-      await database.query('COMMIT');
     }catch (error) {
-      await database.query('ROLLBACK');
       throw error;
     }
   }
@@ -76,43 +73,43 @@ export default class userService {
   }
 
   static async update(id: number, data: IProfile): Promise<boolean> {
+    const t = await sequelize.transaction();
     try {
-      await database.query('BEGIN');
       console.log("Finding user with id:", id)
-      const result = await profileRepository.updateProfile(id, data);
+      const result = await profileRepository.updateProfile(id, data, t);
       const user = await this.get(id);
       console.log("Found user:", user)
       
       if (user?.interests?.length === 0 && data.interests && data.interests.length > 0) {
           console.log("creating interests first time")
-          this.createInterests(user.id, data.interests);
+          await this.createInterests(user.id, data.interests, t);
       } else if (user && data.interests) {
-        await profileRepository.updateInterests(user.id, data.interests);
+        await profileRepository.updateInterests(user.id, data.interests, t);
       }
 
       if (user?.picture_url === null  && data.picture_url) {
-        this.createPicture(user.id, data.picture_url)
+        await this.createPicture(user.id, data.picture_url, t)
       } else if(user && data.picture_url) {
-        await profileRepository.updatePicture(user.id, data.picture_url);
+        await profileRepository.updatePicture(user.id, data.picture_url, t);
       }
 
-      await database.query('COMMIT');
+      await t.commit();
       return result;
     } catch (error) {
-      await database.query('ROLLBACK');
+      await t.rollback();
       throw error;
     }
   }
 
   static async delete(id: number): Promise<number | undefined> {
+    const t = await sequelize.transaction();
     try {
-      await database.query('BEGIN');
-      const result = await profileRepository.deleteProfile(id);
-      await database.query('COMMIT');
+      const result = await profileRepository.deleteProfile(id, t);
+      await t.commit();
 
       return result;
     } catch (error) {
-      await database.query('ROLLBACK');
+      await t.rollback();
       throw error;
     }
   }

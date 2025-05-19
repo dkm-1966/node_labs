@@ -1,8 +1,10 @@
 import database from "../config/database";
+import sequelize from "../config/sequalize";
 import userRepository from "../repositories/userRepository";
 
 export class AuthService {
   static async register(email: string, password: string): Promise<number | null> {
+    const t = await sequelize.transaction();
     try {
       const candidate = await userRepository.getUserByEmail(email);
 
@@ -10,13 +12,12 @@ export class AuthService {
         return null;
       }
       
-      await database.query("BEGIN");
-      const userId = await userRepository.createUser({ email, password });
-      await database.query("COMMIT");
+      const userId = await userRepository.createUser({ email, password }, t);
+      await t.commit();
 
       return userId;
     } catch (error) {
-      await database.query("ROLLBACK");
+      await t.rollback();
       throw error;
     }
   }

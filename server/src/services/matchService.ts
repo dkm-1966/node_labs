@@ -1,4 +1,5 @@
 import database from "../config/database";
+import sequelize from "../config/sequalize";
 import { userDto } from "../dto/profileDto";
 import MatchRepository from "../repositories/matchRepository";
 
@@ -28,28 +29,28 @@ export default class MatchService {
     }
 
     static async setLike(id: number, partnerId: number): Promise<number> {
+        const t = await sequelize.transaction();
         try {
-            await database.query('BEGIN');
-            const newMatchId = await MatchRepository.createMatch(id, partnerId);
-            await database.query('COMMIT');
+            const newMatchId = await MatchRepository.createMatch(id, partnerId, t);
+            await t.commit()
 
             return newMatchId
         }catch (error) {
-            await database.query('ROLLBACK')
+            await t.rollback();
             throw error
         }
         
     }
 
     static async setMatch(id: number, partnerId: number): Promise<boolean> {
+        const t = await sequelize.transaction();
         try {
-            await database.query('BEGIN');
-            const matchStatus = await MatchRepository.updateMatch(id, partnerId);
-            await database.query('COMMIT');
+            const matchStatus = await MatchRepository.updateMatch(id, partnerId, t);
+            await t.commit()
             
             return matchStatus
         } catch (error) {
-          await database.query('ROLLBACK');
+          await t.rollback();
           throw error;
         }
     }

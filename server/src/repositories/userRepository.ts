@@ -1,3 +1,4 @@
+import { Transaction } from "sequelize";
 import { IUser } from "../models/interfaces/User/IUser";
 import { User } from "../models/User";
 
@@ -6,11 +7,11 @@ export interface IUserWithId extends IUser {
 }
 
 export default class userRepository {
-  static async createUser(data: IUser): Promise<number> {
+  static async createUser(data: IUser, transaction: Transaction): Promise<number> {
     const user = await User.create({
       email: data.email,
       password: data.password,
-    });
+    }, {transaction});
 
     return user.id;
   }
