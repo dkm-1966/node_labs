@@ -2,8 +2,14 @@ import database from "../config/database";
 import userRepository from "../repositories/userRepository";
 
 export class AuthService {
-  static async register(email: string, password: string): Promise<number> {
+  static async register(email: string, password: string): Promise<number | null> {
     try {
+      const candidate = await userRepository.getUserByEmail(email);
+
+      if(candidate) {
+        return null;
+      }
+      
       await database.query("BEGIN");
       const userId = await userRepository.createUser({ email, password });
       await database.query("COMMIT");

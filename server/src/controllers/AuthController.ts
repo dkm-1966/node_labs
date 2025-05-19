@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { AuthService } from "../services/authService";
+import userService from "../services/userService";
 
 export default class AuthController {
   static async register(req: Request, res: Response): Promise<void> {
@@ -13,6 +14,10 @@ export default class AuthController {
       }
 
       const userId = await AuthService.register(email, password);
+
+      if (!userId) {
+        res.status(409).json({message: "User already exists"})
+      }
 
       res.status(201).json({ message: "User loged in", userId });
       return 

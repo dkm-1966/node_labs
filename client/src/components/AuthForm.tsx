@@ -40,6 +40,7 @@ const AuthForm = () => {
   };
 
   const handleRegister = async () => {
+    let authFailed: boolean = false;
     if (!email || !password || !name) {
       alert("Please fill in all fields");
       return;
@@ -65,11 +66,21 @@ const AuthForm = () => {
           id = data.userId;
 
           sessionStorage.setItem("userId", JSON.stringify(data.userId));
+        } else {
+          authFailed = true;
+          const data = await res.json();
+          window.alert(data.message);
         }
       })
       .catch((err) => {
+        authFailed = true;
+        window.alert(err.message);
         console.log(err);
       });
+
+    if (authFailed) {
+      return;
+    }
 
     fetch(`http://localhost:5001/api/v1/profile?id=${id}`, {
       method: "POST",
