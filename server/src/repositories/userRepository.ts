@@ -23,7 +23,7 @@ export default class userRepository {
     users.push(newUser);
     await this.writeUsers(users);
 
-    await this.createUserDB(data); // necessary for the entire program to work
+    await this.createUserDB(data);
 
     return newUser.id;
   }
@@ -58,14 +58,4 @@ export default class userRepository {
 
     return result.rows[0].id;
   }
-
-  // private static async getUserByEmailDB(email: string): Promise<IUserWithId | undefined> {
-  //   const query = `SELECT * FROM users WHERE email = $1`;
-  //   const values = [email];
-  //   const result = await database.query(query, values);
-  //
-  //   console.log("getUserByEmail", result.rows[0])
-  //
-  //   return result.rows[0];
-  // }
 }
