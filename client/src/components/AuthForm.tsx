@@ -40,8 +40,6 @@ const AuthForm = () => {
   };
 
   const handleRegister = async () => {
-    const prevId = sessionStorage.getItem("userId");
-
     if (!email || !password || !name) {
       alert("Please fill in all fields");
       return;
@@ -67,18 +65,11 @@ const AuthForm = () => {
           id = data.userId;
 
           sessionStorage.setItem("userId", JSON.stringify(data.userId));
-        } else {
-          const data = await res.json();
-          window.alert(data.message);
         }
       })
       .catch((err) => {
         console.log(err);
       });
-
-    if (sessionStorage.getItem("userId") === prevId) {
-      return;
-    }
 
     fetch(`http://localhost:5001/api/v1/profile?id=${id}`, {
       method: "POST",
