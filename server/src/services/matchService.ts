@@ -28,23 +28,6 @@ export default class MatchService {
 
     static async setLike(id: number, partnerId: number): Promise<number> {
         if (!id || !partnerId) {
-            throw new Error("Error while liking: Id is required")
-        }
-
-        try {
-            await database.query('BEGIN');
-            const matchId = await MatchRepository.updateMatch(id, partnerId);
-            await database.query('COMMIT');
-            
-            return matchId
-        } catch (error) {
-          await database.query('ROLLBACK');
-          throw error;
-        }
-    }
-
-    static async setMatch(id: number, partnerId: number): Promise<number> {
-        if (!id || !partnerId) {
             throw new Error("Error while liking from feed page")
         }
 
@@ -57,6 +40,24 @@ export default class MatchService {
         }catch (error) {
             await database.query('ROLLBACK')
             throw error
+        }
+    }
+
+    static async setMatch(id: number, partnerId: number): Promise<number> {
+        if (!id || !partnerId) {
+            throw new Error("Error while liking: Id is required")
+        }
+
+        try {
+            await database.query('BEGIN');
+            const matchId = await MatchRepository.updateMatch(id, partnerId);
+            console.log("Updated match id:", matchId)
+            await database.query('COMMIT');
+            
+            return matchId
+        } catch (error) {
+          await database.query('ROLLBACK');
+          throw error;
         }
     }
 }

@@ -1,9 +1,9 @@
 import React, { FC, useEffect, useState } from "react";
 import ProfileShortCard from "./ProfileShortCard";
-import OutlinedButton from "../UI/OutilendButton";
+import OutlinedButton from "../UI/OutlinedButton";
 
 interface Profile {
-  id: string;
+  id: number;
   name: string;
   age: number;
   city: string;
@@ -13,11 +13,10 @@ interface Profile {
 }
 
 const Feed: FC = () => {
-  const [limit, setLimit] = useState<number>(5)
   const [offset, setOffset] = useState<number>(0);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
-  let isPrevBtnDisabled = limit <= 5 || offset <= 0;
+  let isPrevBtnDisabled = offset <= 0;
   let isNextBtnDisabled = profiles.length < 5 || profiles.length === 0; 
 
   useEffect(() => {
@@ -29,7 +28,7 @@ const Feed: FC = () => {
     console.log(current_user_id);
 
     fetch(
-      `http://localhost:5001/api/v1/profiles?limit=${limit}&offset=${offset}&id=${current_user_id}&${query.toString()}`,
+      `http://localhost:5001/api/v1/profiles?limit=5&offset=${offset}&id=${current_user_id}&${query.toString()}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -39,21 +38,37 @@ const Feed: FC = () => {
       const data = await res.json();
       setProfiles(data);
     });
-  }, [limit, offset]);
+  }, [offset]);
   
   const handleNextPage = () => {
     if (!isNextBtnDisabled){
-      setLimit((prev) => prev + 5)
       setOffset((prev) => prev + 5)
     }
   }
 
   const handlePrevPage = () => {
     if(!isPrevBtnDisabled) {
-      setLimit((prev) => prev - 5)
       setOffset((prev) => prev - 5)
     }
   }
+
+  const handleSetNewLike = (partnerId: number) => {
+    const currentUserId = sessionStorage.getItem("userId")
+
+    console.log("function triggered")
+        
+    fetch(`http://localhost:5001/api/v1/matches/likes?id=${currentUserId}&partnerId=${partnerId}`, {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json"
+      }
+    }).then(() => {
+      setProfiles((prev) => prev.filter((profile) => profile.id !== partnerId))
+    }).catch((error) => {
+      console.log("Error setting new like from feed", error)
+    })
+  }
+
 
   console.log("profiles", profiles);
   return (
@@ -67,7 +82,7 @@ const Feed: FC = () => {
       </div>
       <div className="flex flex-col items-center justify-center gap-4 w-216 p-4 bg-lime-600 rounded-3xl">
       {profiles?.map((profile) => (
-          <ProfileShortCard key={profile.id} {...profile} />
+          <ProfileShortCard key={profile.id} {...profile} callback={handleSetNewLike} page="loveFinder"/>
       ))}
       </div>
     </div>
