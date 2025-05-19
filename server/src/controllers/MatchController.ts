@@ -42,14 +42,17 @@ export default class MatchController {
 
   static async setLike(req: Request, res: Response) {
     try {
-        const {id, partnerId} = req.body;
+        const {id, partnerId} = req.query;
 
         if (!id || !partnerId) {
           res.status(400).json({ message: "Bad Request: Both 'id' and 'partnerId' are required" });
           return;
         }
 
-        const matchId = await MatchService.setLike(id, partnerId)
+        const parsedId = parseInt(id as string);
+        const parsedPartnerId = parseInt(partnerId as string);
+
+        const matchId = await MatchService.setLike(parsedId, parsedPartnerId)
         res.status(200).json({ message: "Like set", matchId });
     } catch (error) {
       console.error("Error setting like:", error);
@@ -59,14 +62,17 @@ export default class MatchController {
 
   static async createNewMatch(req: Request, res: Response) {
     try {
-      const {id, partnerId} = req.body;
+      const {id, partnerId} = req.query;
+
+      const parsedId = parseInt(id as string);
+      const parsedPartnerId = parseInt(partnerId as string);
 
       if (!id || !partnerId) {
         res.status(400).json({ message: "Bad Request: Both 'id' and 'partnerId' are required" });
         return;
       }
 
-      const matchId = await MatchService.setMatch(id, partnerId)
+      const matchId = await MatchService.setMatch(parsedId, parsedPartnerId)
       res.status(200).json({ message: "Match created", matchId });
     }catch (error) {
       console.error("Error creating match:", error);

@@ -4,6 +4,7 @@ export interface IInterest {
 }
 
 export interface IUser {
+    id: number;
     name: string | null;
     age: number | null;
     info: string | null;
