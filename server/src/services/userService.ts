@@ -34,26 +34,20 @@ export default class userService {
     }
     
     try {
-      await database.query('BEGIN');
       const picture_id = await profileRepository.createPicture(id, picture_url);
-      await database.query('COMMIT');
 
       return picture_id;
     }catch (error) {
-      await database.query('ROLLBACK');
       throw error;
     }
   }
 
   static async createInterests(id: number, interests: IInterest[]): Promise<void> {
     try {
-      await database.query('BEGIN');
       for (const interest of interests) {
         await profileRepository.createInterests(id, interest.interest);
       }
-      await database.query('COMMIT');
     }catch (error) {
-      await database.query('ROLLBACK');
       throw error;
     }
   }

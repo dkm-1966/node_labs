@@ -15,8 +15,8 @@ CREATE TABLE "interests"(
 );
 
 CREATE TABLE "user_interest"(
-    "profile_id" INTEGER,
-    "interest_id" INTEGER
+    "profile_id" INTEGER NOT NULL,
+    "interest_id" INTEGER NOT NULL
 );
 
 CREATE TABLE "match"(

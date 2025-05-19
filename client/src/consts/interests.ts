@@ -19,5 +19,6 @@ export const interests = [
     { interest: "History", category: "Learning" },
     { interest: "Mathematics", category: "Learning" },
     { interest: "Philosophy", category: "Learning" },
+    { interest: "Transaction", category: "Learning" },
   ];
   
