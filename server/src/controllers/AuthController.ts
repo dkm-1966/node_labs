@@ -7,6 +7,10 @@ export default class AuthController {
     try {
       const { email, password } = req.body;
       const userId = await AuthService.register(email, password);
+      if (!userId) {
+        res.status(409).json({ message: "User already exists" });
+        return;
+      }
 
       res.status(201).json({ message: "User loged in", userId });
       return 
